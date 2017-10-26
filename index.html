@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta http-equiv="X-UA-Compatible" content="ie=edge">
+	<title>FCC Wikipedia Viewer</title>
+</head>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Raleway:400,400i,700,700i">
+<style>
+	html,
+	input {
+		font-size: 1rem;
+	}
+
+	body {
+		margin: 0;
+		padding: 0;
+		color: #111;
+	}
+
+	body,
+	input {
+		font-family: 'Raleway', sans-serif;
+	}
+
+	h1,
+	h2 {
+		font-weight: normal;
+	}
+
+	h1 {
+		font-size: 1.75em;
+		margin-bottom: 0.375em;
+		letter-spacing: -0.01875em;
+	}
+
+	img {
+		max-width: 100%;
+		height: auto;
+	}
+
+	a {
+		color: #0645ad;
+	}
+
+	a:hover {
+		text-decoration: none;
+	}
+
+	.error {
+		color: red;
+		font-size: 0.875em;
+		margin: 0 auto;
+		text-align: center;
+		max-width: 40em;
+	}
+
+	#search {
+		text-align: center;
+		margin-top: 1em;
+	}
+
+	#search img {
+		width: 75px;
+	}
+
+	#search span {
+		font-size: 0.8125em;
+	}
+
+	form {
+		display: flex;
+		justify-content: center;
+		width: 85%;
+		margin-left: auto;
+		margin-right: auto;
+		margin-bottom: 0.5em;
+	}
+
+	input {
+		margin: 0 0.25em;
+		border: 1px solid #B5B7B9;
+	}
+
+	input[type="search"] {
+		padding: 0.25em;
+		width: 100%;
+		max-width: 650px;
+	}
+
+	input[type="search"]:focus {
+		border: 1px solid #6e6e6e;
+	}
+
+	input[type="submit"] {
+		font-size: 0.875em;
+		padding: 0.25em 0.75em;
+		transition: box-shadow 0.25s;
+	}
+
+	input[type="submit"]:hover {
+		cursor: pointer;
+		box-shadow: inset 0 0 0.75em rgba(140, 140, 140, 0.3);
+	}
+
+	#results-wrapper {
+		font-size: 0.875em;
+		line-height: 1.375;
+		margin-top: 1.5em;
+		padding-bottom: 3em;
+		transition: opacity 0.5s;
+		opacity: 0;
+	}
+
+	#results-wrapper.active {
+		opacity: 1;
+	}
+
+	.entry {
+		display: flex;
+		justify-content: space-between;
+		margin-left: auto;
+		margin-right: auto;
+		padding: 2.5em 1.5em;
+		max-width: 700px;
+		border-bottom: 1px solid #B5B7B9;
+		opacity: 0;
+		transition: opacity 0.5s;
+	}
+
+	.entry.active {
+		opacity: 1;
+	}
+
+	.entry:nth-child(even) {
+		background-color: #F4F4F4;
+	}
+
+	.entry .img-wrapper {
+		flex: 1 1 20%;
+		text-align: center;
+	}
+
+	.entry .content-wrapper {
+		flex: 1 1 77.5%;
+		padding-left: 1.5em;
+	}
+
+	.entry .content-wrapper>h2 {
+		margin: 0;
+		line-height: 1.25;
+	}
+
+	.entry .content-wrapper>h2 a {
+		text-decoration: none;
+		color: #111;
+	}
+
+	.entry .content-wrapper>h2 a:hover {
+		color: #0645ad;
+	}
+
+	.entry .click-through {
+		display: inline-block;
+		background-color: #0645ad;
+		color: #FFF;
+		padding: 0.625em 1.25em 0.75em;
+		font-size: 0.75em;
+		line-height: 1;
+		text-decoration: none;
+		transition: background-color 0.25s;
+	}
+
+	.entry .click-through:hover {
+		background-color: #083581;
+	}
+
+	@media (min-width: 750px) {
+		html {
+			font-size: 1.25rem;
+		}
+
+		h1 {
+			font-size: 2em;
+		}
+
+		#search {
+			margin-top: 2em;
+		}
+
+		#search img {
+			width: 115px;
+		}
+	}
+
+	@media (min-width: 1200px) {
+		html {
+			font-size: 1.5rem;
+		}
+
+		#search img {
+			width: 150px;
+		}
+
+		#search span {
+			font-size: 0.6125em;
+		}
+
+		.entry {
+			max-width: 950px;
+		}
+
+		#results-wrapper {
+			font-size: 0.8125em;
+		}
+	}
+</style>
+
+<body>
+	<header id="search">
+		<img src="https://res.cloudinary.com/dh1jutnwk/image/upload/v1502892850/wikipedia_bj24mx.jpg" alt="Wikipedia">
+		<h1>Search Wikipedia</h1>
+		<form>
+			<input type="search" placeholder="What would you like to find?">
+			<input type="submit" value="Search">
+		</form>
+		<span>or
+			<a href="https://en.wikipedia.org/wiki/Special:Random" target="blank" class="random">read a random article</a>
+		</span>
+	</header>
+
+	<div id="results-wrapper" class="active"></div>
+</body>
+<script>
+	// API Variables
+	const apiBaseUrl = 'https://en.wikipedia.org/w/api.php?action=query&origin=*&format=json&prop=extracts|pageimages&generator=search&exsentences=2&exlimit=10&exintro=1&gsrnamespace=0&gsrlimit=10&pithumbsize=175&gsrsearch=';
+	const entryBaseUrl = 'https://en.wikipedia.org/?curid='
+
+	// DOM Elements
+	const fieldSearch = document.querySelector('input[type="search"]');
+	const btnSearch = document.querySelector('input[type="submit"]');
+	const results = document.getElementById('results-wrapper');
+
+	// Array to store items returned from the API
+	let entries = [];
+
+	// Class to hold info about each entry
+	class wikiEntry {
+		constructor(index, pageid, title, extract, thumbnail) {
+			this.index = index;
+			this.pageid = pageid;
+			this.title = title;
+			this.extract = extract;
+			this.thumbnail = thumbnail;
+		}
+	}
+
+	// Make a call to the API
+	// XMLHttpRequest left for posterity
+	/*function search(e, criteria) {
+		const xhr = new XMLHttpRequest();
+		xhr.onreadystatechange = function(){
+			if (xhr.readyState === 4 && xhr.status === 200) {
+				const data = JSON.parse(xhr.responseText);
+				const results = data.query.pages;
+				buildEntries(results);
+			}
+		};
+
+		xhr.open('GET', apiBaseUrl + criteria, true);
+		xhr.send();
+		e.preventDefault();
+	}*/
+
+	function search(e, criteria) {
+		fetch(encodeURI(apiBaseUrl + criteria))
+			.then(data => data.json())
+			.then(data => buildEntries(data.query.pages))
+			.catch(err => showError(err));
+		e.preventDefault();
+	}
+
+	// Error Handling
+	function showError(error) {
+		results.classList.remove('active');
+		if (error.message === 'data.query is undefined') {
+			error = `We're sorry, but we couldn't find what you searched for. Please try again.`;
+		}
+
+		let errorMsg = `<div class="error">${error}</div>`;
+		results.addEventListener('transitionend', function () {
+			results.innerHTML = errorMsg;
+			results.classList.add('active');
+		}, { once: true });
+	}
+
+	// Create an object for each item returned from the API and push it to entries[]
+	function buildEntries(items) {
+		results.classList.remove('active');
+		results.addEventListener('transitionend', function () {
+			entries.length = 0;
+			results.innerHTML = '';
+
+			for (const item in items) {
+				const index = items[item].index;
+				const id = items[item].pageid;
+				const title = items[item].title;
+				const extract = items[item].extract;
+				let thumb;
+				if (items[item].thumbnail) {
+					thumb = items[item].thumbnail.source;
+				} else {
+					thumb = null;
+				}
+				const obj = new wikiEntry(index, id, title, extract, thumb);
+				entries.push(obj);
+			}
+
+			sortEntries(entries);
+		}, { once: true });
+	}
+
+	// Sort entries[] by index
+	// Can't find documentation on Wikipedia as to what index is. Going to use this as a measure of relevancy to the search query
+	// Lower index = more relevant
+	function sortEntries(arr) {
+		arr.sort((a, b) => (a.index > b.index) ? 1 : -1);
+		listEntries(arr);
+	}
+
+	// Add entries to the DOM
+	function listEntries(arr) {
+		let thumb;
+		let i = 0;
+		for (i; i < arr.length; i++) {
+			if (arr[i].thumbnail) {
+				thumb = `<img src="${arr[i].thumbnail}">`;
+			} else {
+				thumb = '';
+			}
+			results.innerHTML += `
+				<article class="entry">
+					<div class="img-wrapper">${thumb}</div>
+					<div class="content-wrapper">
+						<h2><a href="${entryBaseUrl}${arr[i].pageid}" target="_blank">${arr[i].title}</a></h2>
+						<p>${arr[i].extract}</p>
+						<a href="${entryBaseUrl}${arr[i].pageid}" target="_blank" class="click-through">Read Entry &raquo; </a>
+					</div>
+				</article>
+			`;
+		}
+
+		if (i === arr.length) {
+			results.classList.add('active');
+			revealEntries();
+		}
+	}
+
+	// Show our entries to the user one by one
+	function revealEntries() {
+		let counter = 0;
+		let j = 0;
+		const i = setInterval(function () {
+			const items = Array.from(document.querySelectorAll('.entry'));
+			counter++;
+			items[j].classList.add('active');
+			j++;
+
+			if (counter === items.length) {
+				clearInterval(i);
+			}
+		}, 250);
+	}
+
+	// Search
+	btnSearch.addEventListener('click', (evt) => {
+		search(evt, fieldSearch.value);
+	});
+</script>
+
+</html>
